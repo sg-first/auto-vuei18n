@@ -1,5 +1,4 @@
 import os
-import json
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Comment
 from pypinyin import lazy_pinyin
@@ -67,22 +66,26 @@ class vueReader:
             i += 1
         return varNameSuffix
 
+
 def generate_localization_file(translations, output_file):
     outputDict = {}
     for moduleName in translations.keys():
         moduleTrans = translations[moduleName]
+        # \n替换为\\n，防止输出文本时变成实际的换行
         moduleTrans = {
             text.replace('\n', '\\n') : var_name
                 for text, var_name in moduleTrans.items()
         }
-        outputDict[moduleName] = {f"\t{var_name}: \"{text}\"," for text, var_name in moduleTrans.items()}  # 转成赋值字符串，varName在前面
-
+        # 转成赋值字符串，varName在前面
+        outputDict[moduleName] = {f"\t{var_name}: \"{text}\"," for text, var_name in moduleTrans.items()}
+    # 把外层也转成字符串
     retStr = ''
     for moduleName, itemLines in outputDict.items():
         content = '\n'.join(itemLines)
         retStr += moduleName + ': {\n' + content + '\n}\n\n'
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(retStr)
+
 
 base_dir = r"src"  # 指定遍历的根目录
 output_localization_file = "localization.js"  # 输出本地化配置文件的路径
@@ -93,12 +96,11 @@ for root, dirs, files in os.walk(base_dir):
         if filename.endswith("vue"):
             vueFile = vueReader(root, filename)
             vueFile.gatherChineseText()
-            # file.write_file()
+            vueFile.write_file()
             moduleName = filename.replace('.vue', '')
             all_translations[moduleName] = vueFile.translations
 
 print(all_translations)
-# 生成本地化配置文件
 generate_localization_file(all_translations, output_localization_file)
 
 print("处理完成，生成本地化文件！")
