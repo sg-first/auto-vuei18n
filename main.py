@@ -2,7 +2,7 @@ import os
 import json
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString
-from deep_translator import GoogleTranslator
+from pypinyin import lazy_pinyin
 
 class vueReader:
     def __init__(self, path, file_name):
@@ -46,16 +46,15 @@ class vueReader:
         return any('\u4e00' <= char <= '\u9fff' for char in text)
 
     def generate_var_name(self, text):
-        try:
-            # 使用 deep-translator 进行翻译
-            english_text = GoogleTranslator(source='zh', target='en').translate(text)
-        except Exception as e:
-            print(f"翻译出错：{e}")
-            english_text = text  # 如果翻译失败，则使用原始文本
-
-        # 生成变量名：将英文文本替换空格为下划线并转换为小写
-        var_name = english_text.replace(" ", "_").lower()
-        return var_name
+        pinyinList = lazy_pinyin(text)
+        i = 1
+        while i <= len(pinyinList):
+            varName = '_'.join(pinyinList[:i])  # 截取前i个字构成变量名
+            if varName in self.translations.values():
+                i += 1
+            else:
+                return varName
+        # TODO: 如果还是碰撞，后面应该加上123
 
 def generate_localization_file(translations, output_file):
     # 生成本地化配置文件
