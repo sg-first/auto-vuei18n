@@ -21,7 +21,7 @@ class vueReader:
         with open(self.full_path, "w", encoding="utf-8") as actual_file:
             actual_file.write(self.modifiedContent)
 
-    def find_chinese_text(self):
+    def gatherChineseText(self):
         soup = BeautifulSoup(self.content, 'html.parser')
         # 删除干扰元素
         decomposeElements = soup.find_all(string=lambda text: isinstance(text, Comment)) + soup.find_all('script')
@@ -32,12 +32,12 @@ class vueReader:
                 i.extract()
         # 处理剩下的所有文本
         for element in soup.find_all(text=True):
-            if isinstance(element, NavigableString) and self.contains_chinese(element):
-                var_name = self.generate_var_name(element)
-                print('getVARNAME:', var_name)
-                self.translations[element] = var_name
-                # 用 $t(变量名) 替换中文文本
-                self.modifiedContent = self.modifiedContent.replace(str(element), f'{{$t("{var_name}")}}')
+            if isinstance(element, NavigableString) and self.contains_chinese(element) and (element not in self.translations.keys()):
+                    var_name = self.generate_var_name(element)
+                    print('varName:', var_name, 'raw:', element)
+                    self.translations[element] = var_name
+                    # 用 $t(变量名) 替换中文文本
+                    self.modifiedContent = self.modifiedContent.replace(str(element), f'{{$t("{var_name}")}}')
 
     def contains_chinese(self, text):
         # 检查文本中是否包含中文字符
@@ -56,12 +56,11 @@ class vueReader:
         # TODO: 如果还是碰撞，后面应该加上123
 
 def generate_localization_file(translations, output_file):
-    # 生成本地化配置文件
-    localization_dict = {var_name: str(text) for text, var_name in translations.items()}
+    for moduleName in translations.keys():
+        moduleTrans = translations[moduleName]
+        translations[moduleName] = {var_name: str(text) for text, var_name in moduleTrans.items()}  # 把varName转成key
     with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(localization_dict, f, ensure_ascii=False, indent=2)
-
-# -- MAIN SCRIPT --
+        json.dump(translations, f, ensure_ascii=False, indent=2)
 
 base_dir = r"vue-views"  # 指定遍历的根目录
 output_localization_file = "localization.js"  # 输出本地化配置文件的路径
@@ -70,11 +69,13 @@ all_translations = {}
 for root, dirs, files in os.walk(base_dir):
     for filename in files:
         if filename.endswith("vue"):
-            file = vueReader(root, filename)
-            file.find_chinese_text()
-            file.write_file()
-            all_translations.update(file.translations)
+            vueFile = vueReader(root, filename)
+            vueFile.gatherChineseText()
+            # file.write_file()
+            moduleName = filename.replace('.vue', '')
+            all_translations[moduleName] = vueFile.translations
 
+print(all_translations)
 # 生成本地化配置文件
 generate_localization_file(all_translations, output_localization_file)
 
