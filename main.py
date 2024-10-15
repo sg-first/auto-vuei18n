@@ -59,7 +59,7 @@ class vueReader:
                     return varName
         else:
             varName = pinyinList[0]
-        # 检查是否碰撞，如果碰撞后面加上123
+        # 检查是否还有重复，如果有，后面加上123
         i = 1
         varNameSuffix = varName
         while varNameSuffix in self.translations.values():
@@ -68,13 +68,23 @@ class vueReader:
         return varNameSuffix
 
 def generate_localization_file(translations, output_file):
+    outputDict = {}
     for moduleName in translations.keys():
         moduleTrans = translations[moduleName]
-        translations[moduleName] = {var_name: str(text) for text, var_name in moduleTrans.items()}  # 把varName转成key
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(translations, f, ensure_ascii=False, indent=2)
+        moduleTrans = {
+            text.replace('\n', '\\n') : var_name
+                for text, var_name in moduleTrans.items()
+        }
+        outputDict[moduleName] = {f"\t{var_name}: \"{text}\"," for text, var_name in moduleTrans.items()}  # 转成赋值字符串，varName在前面
 
-base_dir = r"vue-views"  # 指定遍历的根目录
+    retStr = ''
+    for moduleName, itemLines in outputDict.items():
+        content = '\n'.join(itemLines)
+        retStr += moduleName + ': {\n' + content + '\n}\n\n'
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(retStr)
+
+base_dir = r"src"  # 指定遍历的根目录
 output_localization_file = "localization.js"  # 输出本地化配置文件的路径
 all_translations = {}
 
