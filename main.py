@@ -8,8 +8,8 @@ class vueReader:
     def __init__(self, path, file_name):
         self.name = file_name
         self.path = path
-        full_path = os.path.join(self.path, self.name)
-        with open(full_path, 'r', encoding='utf-8') as file:
+        self.full_path = os.path.join(self.path, self.name)
+        with open(self.full_path, 'r', encoding='utf-8') as file:
             self.content = file.read()
         self.translations = {}
 
@@ -20,9 +20,8 @@ class vueReader:
         return f"FILE: {self.name}"
 
     def write_file(self):
-        full_path = os.path.join(self.path, self.name)
-        with open(full_path, "w", encoding="utf-8") as actual_file:
-            actual_file.write("".join(self.new_lines))
+        with open(self.full_path, "w", encoding="utf-8") as actual_file:
+            actual_file.write(self.modifiedContent)
 
     def find_chinese_text(self):
         self.translations = {}
@@ -50,6 +49,7 @@ class vueReader:
         i = 1
         while i <= len(pinyinList):
             varName = '_'.join(pinyinList[:i])  # 截取前i个字构成变量名
+            varName = varName.strip()
             if varName in self.translations.values():
                 i += 1
             else:
