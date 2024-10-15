@@ -2,10 +2,7 @@ import os
 import json
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString
-from googletrans import Translator
-
-translator = Translator()  # 初始化翻译器
-
+from deep_translator import GoogleTranslator
 
 class File:
     def __init__(self, path, file_name):
@@ -51,14 +48,16 @@ class File:
         return any('\u4e00' <= char <= '\u9fff' for char in text)
 
     def generate_var_name(self, text):
-        # 使用googletrans将整个字符串翻译成英文
-        translation = translator.translate(text, src='zh-cn', dest='en')
-        english_text = translation.text
+        try:
+            # 使用 deep-translator 进行翻译
+            english_text = GoogleTranslator(source='zh', target='en').translate(text)
+        except Exception as e:
+            print(f"翻译出错：{e}")
+            english_text = text  # 如果翻译失败，则使用原始文本
 
         # 生成变量名：将英文文本替换空格为下划线并转换为小写
         var_name = english_text.replace(" ", "_").lower()
         return var_name
-
 
 def generate_localization_file(translations, output_file):
     # 生成本地化配置文件
