@@ -4,22 +4,20 @@ from bs4 import BeautifulSoup
 from bs4.element import NavigableString
 from deep_translator import GoogleTranslator
 
-class File:
+class vueReader:
     def __init__(self, path, file_name):
         self.name = file_name
         self.path = path
+        full_path = os.path.join(self.path, self.name)
+        with open(full_path, 'r', encoding='utf-8') as file:
+            self.content = file.read()
         self.translations = {}
+
         self.lines = []  # 原始的每一行内容
         self.new_lines = []  # 带有翻译变量的每一行内容
-        self.read_file()
 
     def __str__(self):
         return f"FILE: {self.name}"
-
-    def read_file(self):
-        full_path = os.path.join(self.path, self.name)
-        with open(full_path, 'r', encoding='utf-8') as file:
-            self.lines = file.readlines()
 
     def write_file(self):
         full_path = os.path.join(self.path, self.name)
@@ -67,14 +65,14 @@ def generate_localization_file(translations, output_file):
 
 # -- MAIN SCRIPT --
 
-base_dir = r"E:\Work\filmaction-fronted"  # 指定遍历的根目录
+base_dir = r"vue-views"  # 指定遍历的根目录
 output_localization_file = "localization.js"  # 输出本地化配置文件的路径
 all_translations = {}
 
 for root, dirs, files in os.walk(base_dir):
     for filename in files:
         if filename.endswith("vue"):
-            file = File(root, filename)
+            file = vueReader(root, filename)
             file.find_chinese_text()
             file.write_file()
             all_translations.update(file.translations)
