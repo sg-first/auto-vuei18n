@@ -46,14 +46,26 @@ class vueReader:
     def generate_var_name(self, text:str):
         text = text.strip()
         pinyinList = lazy_pinyin(text)
-        i = 2
-        while i <= len(pinyinList):
-            varName = '_'.join(pinyinList[:i])  # 截取前i个字构成变量名
-            if varName in self.translations.values():
-                i += 1
-            else:
-                return varName
-        # TODO: 如果还是碰撞，后面应该加上123
+        pinyinList = [i for i in pinyinList if isinstance(i, str) and i.isalpha()] # 删除非字母元素
+
+        varName = ''
+        if len(pinyinList) >= 2:
+            i = 2
+            while i <= len(pinyinList):
+                varName = '_'.join(pinyinList[:i])  # 截取前i个字构成变量名
+                if varName in self.translations.values():
+                    i += 1
+                else:
+                    return varName
+        else:
+            varName = pinyinList[0]
+        # 检查是否碰撞，如果碰撞后面加上123
+        i = 1
+        varNameSuffix = varName
+        while varNameSuffix in self.translations.values():
+            varNameSuffix = varName + '_' + str(i)
+            i += 1
+        return varNameSuffix
 
 def generate_localization_file(translations, output_file):
     for moduleName in translations.keys():
