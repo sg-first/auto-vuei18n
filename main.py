@@ -1,7 +1,7 @@
 import os
 import json
 from bs4 import BeautifulSoup
-from bs4.element import NavigableString
+from bs4.element import NavigableString, Comment
 from pypinyin import lazy_pinyin
 
 class vueReader:
@@ -11,10 +11,8 @@ class vueReader:
         self.full_path = os.path.join(self.path, self.name)
         with open(self.full_path, 'r', encoding='utf-8') as file:
             self.content = file.read()
+            self.modifiedContent = self.content
         self.translations = {}
-
-        self.lines = []  # 原始的每一行内容
-        self.new_lines = []  # 带有翻译变量的每一行内容
 
     def __str__(self):
         return f"FILE: {self.name}"
@@ -24,32 +22,33 @@ class vueReader:
             actual_file.write(self.modifiedContent)
 
     def find_chinese_text(self):
-        self.translations = {}
-        for line in self.lines:
-            # 用 BeautifulSoup 解析每一行
-            soup = BeautifulSoup(line, 'html.parser')
-            modified_line = line  # 保留原行，可能被修改
-
-            # 遍历所有文本节点
-            for element in soup.find_all(text=True):
-                if isinstance(element, NavigableString) and self.contains_chinese(element):
-                    var_name = self.generate_var_name(element)
-                    self.translations[element] = var_name
-                    # 用 $t(变量名) 替换中文文本
-                    modified_line = modified_line.replace(str(element), f'{{$t("{var_name}")}}')
-
-            self.new_lines.append(modified_line)  # 将修改后的行加入新内容中
+        soup = BeautifulSoup(self.content, 'html.parser')
+        # 删除干扰元素
+        decomposeElements = soup.find_all(string=lambda text: isinstance(text, Comment)) + soup.find_all('script')
+        for i in decomposeElements:
+            try:
+                i.decompose()
+            except AttributeError:
+                i.extract()
+        # 处理剩下的所有文本
+        for element in soup.find_all(text=True):
+            if isinstance(element, NavigableString) and self.contains_chinese(element):
+                var_name = self.generate_var_name(element)
+                print('getVARNAME:', var_name)
+                self.translations[element] = var_name
+                # 用 $t(变量名) 替换中文文本
+                self.modifiedContent = self.modifiedContent.replace(str(element), f'{{$t("{var_name}")}}')
 
     def contains_chinese(self, text):
         # 检查文本中是否包含中文字符
         return any('\u4e00' <= char <= '\u9fff' for char in text)
 
-    def generate_var_name(self, text):
+    def generate_var_name(self, text:str):
+        text = text.strip()
         pinyinList = lazy_pinyin(text)
-        i = 1
+        i = 2
         while i <= len(pinyinList):
             varName = '_'.join(pinyinList[:i])  # 截取前i个字构成变量名
-            varName = varName.strip()
             if varName in self.translations.values():
                 i += 1
             else:
