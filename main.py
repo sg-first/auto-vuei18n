@@ -31,12 +31,21 @@ class vueReader:
                 i.extract()
         # 处理剩下的所有文本
         for element in soup.find_all(text=True):
-            if isinstance(element, NavigableString) and self.contains_chinese(element) and (element not in self.translations.keys()):
-                    var_name = self.generate_var_name(element)
-                    print('varName:', var_name, 'raw:', element)
-                    self.translations[element] = var_name
-                    # 用 $t(变量名) 替换中文文本
-                    self.modifiedContent = self.modifiedContent.replace(str(element), f'{{$t("{var_name}")}}')
+            if isinstance(element, NavigableString) and self.contains_chinese(element) and (
+                    element not in self.translations.keys()):
+                self.generateVar(element)
+        # 处理vue placeholder中的文本
+        for element in soup.find_all(attrs={"placeholder": True}):
+            placeholderText = element['placeholder']
+            if self.contains_chinese(placeholderText) and (placeholderText not in self.translations.keys()):
+                self.generateVar(placeholderText)
+
+    def generateVar(self, element):
+        var_name = self.generate_var_name(element)
+        # print('varName:', var_name, 'raw:', element)
+        self.translations[element] = var_name
+        # 用 $t(变量名) 替换中文文本
+        self.modifiedContent = self.modifiedContent.replace(str(element), f'{{$t("{var_name}")}}')
 
     def contains_chinese(self, text):
         # 检查文本中是否包含中文字符
